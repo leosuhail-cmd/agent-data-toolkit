@@ -20,12 +20,23 @@ get_token_price("0x4200000000000000000000000000000000000006", "Base")
 ```
 
 ### `check_counterparty(pay_to)`  · stable
-Before your agent **pays** another agent, check whether that wallet is a real service with a track record or an unknown/farm operator. Returns a verdict plus the counterparty's known services and payer counts.
+Before your agent **pays** another agent, check its **verifiable on-chain payment reputation** — not self-reported catalog counts. We look at who actually paid this wallet in USDC on Base, strip known crawler/router wallets, check for self-washing concentration, and **abstain honestly** when the evidence is thin. The verdict is one of:
+
+- `established` — many distinct real payers, well-distributed → genuine paid usage
+- `thin` — only a handful of real payers → minimal track record
+- `no_onchain_history` — no verifiable payments → **unverified, pay at your own risk**
+- `concentrated` — payers exist but one wallet dominates → possible self-generated demand
+- `infrastructure` — a known router/contract, not an agent service
+- `unknown` — on-chain lookup temporarily unavailable
 
 ```json
-check_counterparty("0xE3fb...cc20")
-→ { "verdict": "genuine", "isFarmOperator": false, "serviceCount": 4, "services": [ … ] }
+check_counterparty("0x0e84...b808")
+→ { "verdict": "established", "confidence": "high",
+    "summary": "131 independent payers with well-distributed usage — strong evidence of genuine demand.",
+    "evidence": { "independent_payers": 131, "total_usd": 4.3, "top_payer_tx_share": 0.02,
+                  "catalog_claimed_payers": 210, "flags": [] } }
 ```
+The verdict method is open and auditable — see [verdict_reference.py](verdict_reference.py).
 
 ### `agent_demand_map()`  · stable
 Where genuine demand sits across the agent-services economy — thousands of live services, ranked by real payers per category, farm operators excluded. Use it to decide what to build or where to point an agent.
